@@ -22,26 +22,27 @@ import (
 
 // IssueResponse is the JSON response for an issue.
 type IssueResponse struct {
-	ID                 string                  `json:"id"`
-	WorkspaceID        string                  `json:"workspace_id"`
-	Number             int32                   `json:"number"`
-	Identifier         string                  `json:"identifier"`
-	Title              string                  `json:"title"`
-	Description        *string                 `json:"description"`
-	Status             string                  `json:"status"`
-	Priority           string                  `json:"priority"`
-	AssigneeType       *string                 `json:"assignee_type"`
-	AssigneeID         *string                 `json:"assignee_id"`
-	CreatorType        string                  `json:"creator_type"`
-	CreatorID          string                  `json:"creator_id"`
-	ParentIssueID      *string                 `json:"parent_issue_id"`
-	ProjectID          *string                 `json:"project_id"`
-	Position           float64                 `json:"position"`
-	DueDate            *string                 `json:"due_date"`
-	CreatedAt          string                  `json:"created_at"`
-	UpdatedAt          string                  `json:"updated_at"`
-	Reactions          []IssueReactionResponse `json:"reactions,omitempty"`
-	Attachments        []AttachmentResponse    `json:"attachments,omitempty"`
+	ID            string                  `json:"id"`
+	WorkspaceID   string                  `json:"workspace_id"`
+	Number        int32                   `json:"number"`
+	Identifier    string                  `json:"identifier"`
+	Title         string                  `json:"title"`
+	Description   *string                 `json:"description"`
+	Status        string                  `json:"status"`
+	Priority      string                  `json:"priority"`
+	Orchestration *string                 `json:"orchestration"`
+	AssigneeType  *string                 `json:"assignee_type"`
+	AssigneeID    *string                 `json:"assignee_id"`
+	CreatorType   string                  `json:"creator_type"`
+	CreatorID     string                  `json:"creator_id"`
+	ParentIssueID *string                 `json:"parent_issue_id"`
+	ProjectID     *string                 `json:"project_id"`
+	Position      float64                 `json:"position"`
+	DueDate       *string                 `json:"due_date"`
+	CreatedAt     string                  `json:"created_at"`
+	UpdatedAt     string                  `json:"updated_at"`
+	Reactions     []IssueReactionResponse `json:"reactions,omitempty"`
+	Attachments   []AttachmentResponse    `json:"attachments,omitempty"`
 }
 
 func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
@@ -55,6 +56,7 @@ func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 		Description:   textToPtr(i.Description),
 		Status:        i.Status,
 		Priority:      i.Priority,
+		Orchestration: textToPtr(i.Orchestration),
 		AssigneeType:  textToPtr(i.AssigneeType),
 		AssigneeID:    uuidToPtr(i.AssigneeID),
 		CreatorType:   i.CreatorType,
@@ -80,6 +82,7 @@ func issueListRowToResponse(i db.ListIssuesRow, issuePrefix string) IssueRespons
 		Description:   textToPtr(i.Description),
 		Status:        i.Status,
 		Priority:      i.Priority,
+		Orchestration: textToPtr(i.Orchestration),
 		AssigneeType:  textToPtr(i.AssigneeType),
 		AssigneeID:    uuidToPtr(i.AssigneeID),
 		CreatorType:   i.CreatorType,
@@ -104,6 +107,7 @@ func openIssueRowToResponse(i db.ListOpenIssuesRow, issuePrefix string) IssueRes
 		Description:   textToPtr(i.Description),
 		Status:        i.Status,
 		Priority:      i.Priority,
+		Orchestration: textToPtr(i.Orchestration),
 		AssigneeType:  textToPtr(i.AssigneeType),
 		AssigneeID:    uuidToPtr(i.AssigneeID),
 		CreatorType:   i.CreatorType,
@@ -244,7 +248,7 @@ func buildSearchQuery(phrase string, terms []string, queryNum int, hasNum bool, 
 	}
 
 	escapedPhrase := escapeLike(phrase)
-	phraseParam := nextArg(escapedPhrase)               // $1
+	phraseParam := nextArg(escapedPhrase) // $1
 	phraseContains := "'%' || " + phraseParam + " || '%'"
 	phraseStartsWith := phraseParam + " || '%'"
 
@@ -420,7 +424,7 @@ func buildSearchQuery(phrase string, terms []string, queryNum int, hasNum bool, 
 	limitParam := nextArg(nil)  // placeholder
 	offsetParam := nextArg(nil) // placeholder
 
-	query := fmt.Sprintf(`SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
+	query := fmt.Sprintf(`SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority, i.orchestration,
 		i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
 		i.parent_issue_id, i.acceptance_criteria, i.context_refs, i.position,
 		i.due_date, i.created_at, i.updated_at, i.number, i.project_id,
@@ -500,6 +504,7 @@ func (h *Handler) SearchIssues(w http.ResponseWriter, r *http.Request) {
 			&sr.issue.Description,
 			&sr.issue.Status,
 			&sr.issue.Priority,
+			&sr.issue.Orchestration,
 			&sr.issue.AssigneeType,
 			&sr.issue.AssigneeID,
 			&sr.issue.CreatorType,
@@ -758,16 +763,17 @@ func (h *Handler) ChildIssueProgress(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateIssueRequest struct {
-	Title              string   `json:"title"`
-	Description        *string  `json:"description"`
-	Status             string   `json:"status"`
-	Priority           string   `json:"priority"`
-	AssigneeType       *string  `json:"assignee_type"`
-	AssigneeID         *string  `json:"assignee_id"`
-	ParentIssueID      *string  `json:"parent_issue_id"`
-	ProjectID          *string  `json:"project_id"`
-	DueDate            *string  `json:"due_date"`
-	AttachmentIDs      []string `json:"attachment_ids,omitempty"`
+	Title         string   `json:"title"`
+	Description   *string  `json:"description"`
+	Status        string   `json:"status"`
+	Priority      string   `json:"priority"`
+	Orchestration *string  `json:"orchestration"`
+	AssigneeType  *string  `json:"assignee_type"`
+	AssigneeID    *string  `json:"assignee_id"`
+	ParentIssueID *string  `json:"parent_issue_id"`
+	ProjectID     *string  `json:"project_id"`
+	DueDate       *string  `json:"due_date"`
+	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
 
 func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
@@ -868,20 +874,21 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	creatorType, actualCreatorID := h.resolveActor(r, creatorID, workspaceID)
 
 	issue, err := qtx.CreateIssue(r.Context(), db.CreateIssueParams{
-		WorkspaceID:        parseUUID(workspaceID),
-		Title:              req.Title,
-		Description:        ptrToText(req.Description),
-		Status:             status,
-		Priority:           priority,
-		AssigneeType:       assigneeType,
-		AssigneeID:         assigneeID,
-		CreatorType:        creatorType,
-		CreatorID:          parseUUID(actualCreatorID),
-		ParentIssueID:      parentIssueID,
-		Position:           0,
-		DueDate:            dueDate,
-		Number:             issueNumber,
-		ProjectID:          projectID,
+		WorkspaceID:   parseUUID(workspaceID),
+		Title:         req.Title,
+		Description:   ptrToText(req.Description),
+		Status:        status,
+		Priority:      priority,
+		Orchestration: ptrToText(req.Orchestration),
+		AssigneeType:  assigneeType,
+		AssigneeID:    assigneeID,
+		CreatorType:   creatorType,
+		CreatorID:     parseUUID(actualCreatorID),
+		ParentIssueID: parentIssueID,
+		Position:      0,
+		DueDate:       dueDate,
+		Number:        issueNumber,
+		ProjectID:     projectID,
 	})
 	if err != nil {
 		slog.Warn("create issue failed", append(logger.RequestAttrs(r), "error", err, "workspace_id", workspaceID)...)
@@ -930,16 +937,17 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateIssueRequest struct {
-	Title              *string  `json:"title"`
-	Description        *string  `json:"description"`
-	Status             *string  `json:"status"`
-	Priority           *string  `json:"priority"`
-	AssigneeType       *string  `json:"assignee_type"`
-	AssigneeID         *string  `json:"assignee_id"`
-	Position           *float64 `json:"position"`
-	DueDate            *string  `json:"due_date"`
-	ParentIssueID      *string  `json:"parent_issue_id"`
-	ProjectID          *string  `json:"project_id"`
+	Title         *string  `json:"title"`
+	Description   *string  `json:"description"`
+	Status        *string  `json:"status"`
+	Priority      *string  `json:"priority"`
+	Orchestration *string  `json:"orchestration"`
+	AssigneeType  *string  `json:"assignee_type"`
+	AssigneeID    *string  `json:"assignee_id"`
+	Position      *float64 `json:"position"`
+	DueDate       *string  `json:"due_date"`
+	ParentIssueID *string  `json:"parent_issue_id"`
+	ProjectID     *string  `json:"project_id"`
 }
 
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
@@ -971,6 +979,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	// Pre-fill nullable fields (bare sqlc.narg) with current values
 	params := db.UpdateIssueParams{
 		ID:            prevIssue.ID,
+		Orchestration: prevIssue.Orchestration,
 		AssigneeType:  prevIssue.AssigneeType,
 		AssigneeID:    prevIssue.AssigneeID,
 		DueDate:       prevIssue.DueDate,
@@ -990,6 +999,13 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Priority != nil {
 		params.Priority = pgtype.Text{String: *req.Priority, Valid: true}
+	}
+	if _, ok := rawFields["orchestration"]; ok {
+		if req.Orchestration != nil {
+			params.Orchestration = pgtype.Text{String: *req.Orchestration, Valid: true}
+		} else {
+			params.Orchestration = pgtype.Text{Valid: false}
+		}
 	}
 	if req.Position != nil {
 		params.Position = pgtype.Float8{Float64: *req.Position, Valid: true}
@@ -1303,6 +1319,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 
 		params := db.UpdateIssueParams{
 			ID:            prevIssue.ID,
+			Orchestration: prevIssue.Orchestration,
 			AssigneeType:  prevIssue.AssigneeType,
 			AssigneeID:    prevIssue.AssigneeID,
 			DueDate:       prevIssue.DueDate,
@@ -1321,6 +1338,13 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.Updates.Priority != nil {
 			params.Priority = pgtype.Text{String: *req.Updates.Priority, Valid: true}
+		}
+		if _, ok := rawUpdates["orchestration"]; ok {
+			if req.Updates.Orchestration != nil {
+				params.Orchestration = pgtype.Text{String: *req.Updates.Orchestration, Valid: true}
+			} else {
+				params.Orchestration = pgtype.Text{Valid: false}
+			}
 		}
 		if req.Updates.Position != nil {
 			params.Position = pgtype.Float8{Float64: *req.Updates.Position, Valid: true}

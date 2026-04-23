@@ -5,7 +5,7 @@ import { useNavigation } from "../navigation";
 import { Check, ChevronRight, Maximize2, Minimize2, X as XIcon } from "lucide-react";
 import { cn } from "@multica/ui/lib/utils";
 import { toast } from "sonner";
-import type { IssueStatus, IssuePriority, IssueAssigneeType } from "@multica/core/types";
+import type { IssueStatus, IssuePriority, IssueAssigneeType, IssueOrchestration } from "@multica/core/types";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
 import { Button } from "@multica/ui/components/ui/button";
 import { ContentEditor, type ContentEditorRef, TitleEditor, useFileDropZone, FileDropOverlay } from "../editor";
-import { StatusIcon, StatusPicker, PriorityPicker, AssigneePicker, DueDatePicker } from "../issues/components";
+import { StatusIcon, StatusPicker, PriorityPicker, OrchestrationPicker, AssigneePicker, DueDatePicker } from "../issues/components";
 import { BacklogAgentHintContent } from "../issues/components/backlog-agent-hint-dialog";
 import { ProjectPicker } from "../projects/components/project-picker";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
@@ -45,6 +45,9 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
   });
   const [status, setStatus] = useState<IssueStatus>((data?.status as IssueStatus) || draft.status);
   const [priority, setPriority] = useState<IssuePriority>(draft.priority);
+  const [orchestration, setOrchestration] = useState<IssueOrchestration | null>(
+    (data?.orchestration as IssueOrchestration | null) ?? draft.orchestration ?? null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [assigneeType, setAssigneeType] = useState<IssueAssigneeType | undefined>(draft.assigneeType);
   const [assigneeId, setAssigneeId] = useState<string | undefined>(draft.assigneeId);
@@ -70,6 +73,10 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
   const updateTitle = (v: string) => { setTitle(v); setDraft({ title: v }); };
   const updateStatus = (v: IssueStatus) => { setStatus(v); setDraft({ status: v }); };
   const updatePriority = (v: IssuePriority) => { setPriority(v); setDraft({ priority: v }); };
+  const updateOrchestration = (v: IssueOrchestration | null) => {
+    setOrchestration(v);
+    setDraft({ orchestration: v ?? undefined });
+  };
   const updateAssignee = (type?: IssueAssigneeType, id?: string) => {
     setAssigneeType(type); setAssigneeId(id);
     setDraft({ assigneeType: type, assigneeId: id });
@@ -87,6 +94,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
         description: descEditorRef.current?.getMarkdown()?.trim() || undefined,
         status,
         priority,
+        orchestration: orchestration || undefined,
         assignee_type: assigneeType,
         assignee_id: assigneeId,
         due_date: dueDate || undefined,
@@ -268,6 +276,14 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
               <PriorityPicker
                 priority={priority}
                 onUpdate={(u) => { if (u.priority) updatePriority(u.priority); }}
+                triggerRender={<PillButton />}
+                align="start"
+              />
+
+              {/* Orchestration */}
+              <OrchestrationPicker
+                orchestration={orchestration}
+                onUpdate={(u) => updateOrchestration(u.orchestration ?? null)}
                 triggerRender={<PillButton />}
                 align="start"
               />

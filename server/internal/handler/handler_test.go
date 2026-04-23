@@ -238,9 +238,10 @@ func TestIssueCRUD(t *testing.T) {
 	// Create
 	w := httptest.NewRecorder()
 	req := newRequest("POST", "/api/issues?workspace_id="+testWorkspaceID, map[string]any{
-		"title":    "Test issue from Go test",
-		"status":   "todo",
-		"priority": "medium",
+		"title":         "Test issue from Go test",
+		"status":        "todo",
+		"priority":      "medium",
+		"orchestration": "specification",
 	})
 	testHandler.CreateIssue(w, req)
 	if w.Code != http.StatusCreated {
@@ -254,6 +255,9 @@ func TestIssueCRUD(t *testing.T) {
 	}
 	if created.Status != "todo" {
 		t.Fatalf("CreateIssue: expected status 'todo', got '%s'", created.Status)
+	}
+	if created.Orchestration == nil || *created.Orchestration != "specification" {
+		t.Fatalf("CreateIssue: expected orchestration 'specification', got %v", created.Orchestration)
 	}
 	issueID := created.ID
 
@@ -272,11 +276,12 @@ func TestIssueCRUD(t *testing.T) {
 		t.Fatalf("GetIssue: expected id '%s', got '%s'", issueID, fetched.ID)
 	}
 
-	// Update - partial (only status)
+	// Update - partial (status + orchestration)
 	w = httptest.NewRecorder()
 	status := "in_progress"
 	req = newRequest("PUT", "/api/issues/"+issueID, map[string]any{
-		"status": status,
+		"status":        status,
+		"orchestration": "development",
 	})
 	req = withURLParam(req, "id", issueID)
 	testHandler.UpdateIssue(w, req)
@@ -294,6 +299,9 @@ func TestIssueCRUD(t *testing.T) {
 	}
 	if updated.Priority != "medium" {
 		t.Fatalf("UpdateIssue: priority should be preserved, got '%s'", updated.Priority)
+	}
+	if updated.Orchestration == nil || *updated.Orchestration != "development" {
+		t.Fatalf("UpdateIssue: expected orchestration 'development', got %v", updated.Orchestration)
 	}
 
 	// List
@@ -826,7 +834,7 @@ func TestSendCodeDbError(t *testing.T) {
 	// We can't easily mock the DB here without changing architecture,
 	// but we can simulate a DB error by closing the pool temporarily or
 	// using a cancelled context if the query respects it.
-	
+
 	// Create a handler with a "broken" queries object is hard because it's a struct.
 	// Instead, let's use a context that is already cancelled.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -841,13 +849,13 @@ func TestSendCodeDbError(t *testing.T) {
 	req = req.WithContext(ctx)
 
 	testHandler.SendCode(w, req)
-	
+
 	// If the DB query respects the cancelled context, it should return an error.
 	// pgx usually returns context.Canceled which is not what isNotFound checks for.
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("SendCode (db error): expected 500, got %d: %s", w.Code, w.Body.String())
 	}
-	
+
 	var resp map[string]string
 	json.NewDecoder(w.Body).Decode(&resp)
 	if resp["error"] != "failed to lookup user" {

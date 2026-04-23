@@ -271,6 +271,7 @@ type Issue struct {
 	OriginType         pgtype.Text        `json:"origin_type"`
 	OriginID           pgtype.UUID        `json:"origin_id"`
 	FirstExecutedAt    pgtype.Timestamptz `json:"first_executed_at"`
+	Orchestration      pgtype.Text        `json:"orchestration"`
 }
 
 type IssueDependency struct {

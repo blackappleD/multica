@@ -53,6 +53,7 @@ import { ActorAvatar } from "../../common/actor-avatar";
 import {
   SORT_OPTIONS,
   CARD_PROPERTY_OPTIONS,
+  DEFAULT_CARD_PROPERTIES,
   type ActorFilterValue,
 } from "@multica/core/issues/stores/view-store";
 import { useViewStore, useViewStoreApi } from "@multica/core/issues/stores/view-store-context";
@@ -396,6 +397,10 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
   const sortDirection = useViewStore((s) => s.sortDirection);
   const cardProperties = useViewStore((s) => s.cardProperties);
   const act = useViewStoreApi().getState();
+  const normalizedCardProperties = {
+    ...DEFAULT_CARD_PROPERTIES,
+    ...cardProperties,
+  };
 
   const counts = useIssueCounts(scopedIssues);
 
@@ -689,7 +694,7 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                     <span className="text-sm">{opt.label}</span>
                     <Switch
                       size="sm"
-                      checked={cardProperties[opt.key]}
+                      checked={normalizedCardProperties[opt.key]}
                       onCheckedChange={() => act.toggleCardProperty(opt.key)}
                     />
                   </label>

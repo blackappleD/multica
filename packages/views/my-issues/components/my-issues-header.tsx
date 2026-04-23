@@ -13,6 +13,7 @@ import {
   List,
   SignalHigh,
   SlidersHorizontal,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@multica/ui/components/ui/button";
 import {
@@ -44,6 +45,7 @@ import { StatusIcon, PriorityIcon } from "../../issues/components";
 import {
   SORT_OPTIONS,
   CARD_PROPERTY_OPTIONS,
+  DEFAULT_CARD_PROPERTIES,
 } from "@multica/core/issues/stores/view-store";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
 import type { Issue } from "@multica/core/types";
@@ -105,6 +107,15 @@ const SCOPES: { value: MyIssuesScope; label: string; description: string }[] = [
   { value: "agents", label: "My Agents", description: "Issues assigned to my agents" },
 ];
 
+const MY_ISSUES_CARD_PROPERTY_OPTIONS = [
+  { key: "orchestration" as const, label: "Orchestration" },
+  ...CARD_PROPERTY_OPTIONS,
+];
+const MY_ISSUES_DEFAULT_CARD_PROPERTIES = {
+  ...DEFAULT_CARD_PROPERTIES,
+  orchestration: true,
+};
+
 // ---------------------------------------------------------------------------
 // MyIssuesHeader
 // ---------------------------------------------------------------------------
@@ -118,6 +129,10 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
   const cardProperties = useStore(myIssuesViewStore, (s) => s.cardProperties);
   const scope = useStore(myIssuesViewStore, (s) => s.scope);
   const act = myIssuesViewStore.getState();
+  const normalizedCardProperties = {
+    ...MY_ISSUES_DEFAULT_CARD_PROPERTIES,
+    ...cardProperties,
+  };
 
   const counts = useIssueCounts(allIssues);
 
@@ -330,7 +345,7 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                 Card properties
               </span>
               <div className="mt-2 space-y-2">
-                {CARD_PROPERTY_OPTIONS.map((opt) => (
+                {MY_ISSUES_CARD_PROPERTY_OPTIONS.map((opt) => (
                   <label
                     key={opt.key}
                     className="flex cursor-pointer items-center justify-between"
@@ -338,7 +353,7 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                     <span className="text-sm">{opt.label}</span>
                     <Switch
                       size="sm"
-                      checked={cardProperties[opt.key]}
+                      checked={normalizedCardProperties[opt.key]}
                       onCheckedChange={() => act.toggleCardProperty(opt.key)}
                     />
                   </label>
@@ -358,6 +373,8 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
                     <Button variant="outline" size="icon-sm" className="text-muted-foreground">
                       {viewMode === "board" ? (
                         <Columns3 className="size-4" />
+                      ) : viewMode === "orchestration" ? (
+                        <Workflow className="size-4" />
                       ) : (
                         <List className="size-4" />
                       )}
@@ -367,7 +384,11 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
               }
             />
             <TooltipContent side="bottom">
-              {viewMode === "board" ? "Board view" : "List view"}
+              {viewMode === "board"
+                ? "Board view"
+                : viewMode === "orchestration"
+                  ? "Orchestration view"
+                  : "List view"}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-auto">
@@ -376,6 +397,10 @@ export function MyIssuesHeader({ allIssues }: { allIssues: Issue[] }) {
               <DropdownMenuItem onClick={() => act.setViewMode("board")}>
                 <Columns3 />
                 Board
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => act.setViewMode("orchestration")}>
+                <Workflow />
+                Orchestration
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => act.setViewMode("list")}>
                 <List />

@@ -9,11 +9,12 @@ import { ALL_STATUSES } from "../config";
 import { createWorkspaceAwareStorage, registerForWorkspaceRehydration } from "../../platform/workspace-storage";
 import { defaultStorage } from "../../platform/storage";
 
-export type ViewMode = "board" | "list";
+export type ViewMode = "board" | "list" | "orchestration";
 export type SortField = "position" | "priority" | "due_date" | "created_at" | "title";
 export type SortDirection = "asc" | "desc";
 
 export interface CardProperties {
+  orchestration: boolean;
   priority: boolean;
   description: boolean;
   assignee: boolean;
@@ -35,7 +36,18 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: "title", label: "Title" },
 ];
 
+export const DEFAULT_CARD_PROPERTIES: CardProperties = {
+  orchestration: false,
+  priority: true,
+  description: true,
+  assignee: true,
+  dueDate: true,
+  project: true,
+  childProgress: true,
+};
+
 export const CARD_PROPERTY_OPTIONS: { key: keyof CardProperties; label: string }[] = [
+  { key: "orchestration", label: "Orchestration" },
   { key: "priority", label: "Priority" },
   { key: "description", label: "Description" },
   { key: "assignee", label: "Assignee" },
@@ -85,14 +97,7 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
   includeNoProject: false,
   sortBy: "position",
   sortDirection: "asc",
-  cardProperties: {
-    priority: true,
-    description: true,
-    assignee: true,
-    dueDate: true,
-    project: true,
-    childProgress: true,
-  },
+  cardProperties: DEFAULT_CARD_PROPERTIES,
   listCollapsedStatuses: [],
 
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -176,7 +181,7 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
     set((state) => ({
       cardProperties: {
         ...state.cardProperties,
-        [key]: !state.cardProperties[key],
+        [key]: !(state.cardProperties[key] ?? DEFAULT_CARD_PROPERTIES[key]),
       },
     })),
   toggleListCollapsed: (status) =>

@@ -9,9 +9,12 @@ import { useIssueSelectionStore } from "@multica/core/issues/stores/selection-st
 import { useWorkspacePaths } from "@multica/core/paths";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { useViewStore } from "@multica/core/issues/stores/view-store-context";
+import { DEFAULT_CARD_PROPERTIES } from "@multica/core/issues/stores/view-store";
 import { projectListOptions } from "@multica/core/projects/queries";
+import { ORCHESTRATION_CONFIG } from "@multica/core/issues/config";
 import { PriorityIcon } from "./priority-icon";
 import { ProgressRing } from "./progress-ring";
+import { OrchestrationIcon } from "./orchestration-icon";
 
 export interface ChildProgress {
   done: number;
@@ -35,7 +38,8 @@ export const ListRow = memo(function ListRow({
   const selected = useIssueSelectionStore((s) => s.selectedIds.has(issue.id));
   const toggle = useIssueSelectionStore((s) => s.toggle);
   const p = useWorkspacePaths();
-  const storeProperties = useViewStore((s) => s.cardProperties);
+  const rawCardProperties = useViewStore((s) => s.cardProperties);
+  const storeProperties = { ...DEFAULT_CARD_PROPERTIES, ...rawCardProperties };
   const wsId = useWorkspaceId();
   const { data: projects = [] } = useQuery({
     ...projectListOptions(wsId),
@@ -43,6 +47,10 @@ export const ListRow = memo(function ListRow({
   });
   const project = issue.project_id ? projects.find((pr) => pr.id === issue.project_id) : undefined;
 
+  const orchestrationCfg = issue.orchestration
+    ? ORCHESTRATION_CONFIG[issue.orchestration]
+    : null;
+  const showOrchestration = storeProperties.orchestration && orchestrationCfg;
   const showProject = storeProperties.project && project;
   const showChildProgress = storeProperties.childProgress && childProgress;
   const showAssignee = storeProperties.assignee && issue.assignee_type && issue.assignee_id;
@@ -83,6 +91,12 @@ export const ListRow = memo(function ListRow({
               <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
                 {childProgress!.done}/{childProgress!.total}
               </span>
+            </span>
+          )}
+          {showOrchestration && (
+            <span className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${orchestrationCfg.badgeBg} ${orchestrationCfg.badgeText}`}>
+              <OrchestrationIcon orchestration={issue.orchestration} className="h-3 w-3" inheritColor />
+              {orchestrationCfg.label}
             </span>
           )}
         </span>

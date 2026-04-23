@@ -17,6 +17,7 @@ const mockDraftStore = {
     description: "",
     status: "todo" as const,
     priority: "none" as const,
+    orchestration: undefined,
     assigneeType: undefined,
     assigneeId: undefined,
     dueDate: null,
@@ -106,6 +107,7 @@ vi.mock("../issues/components", () => ({
   StatusIcon: ({ status }: { status: string }) => <span data-testid="status-icon">{status}</span>,
   StatusPicker: () => <div data-testid="status-picker" />,
   PriorityPicker: () => <div data-testid="priority-picker" />,
+  OrchestrationPicker: () => <div data-testid="orchestration-picker" />,
   AssigneePicker: () => <div data-testid="assignee-picker" />,
   DueDatePicker: () => <div data-testid="due-date-picker" />,
 }));
@@ -196,6 +198,7 @@ describe("CreateIssueModal", () => {
         description: undefined,
         status: "todo",
         priority: "none",
+        orchestration: undefined,
         assignee_type: undefined,
         assignee_id: undefined,
         due_date: undefined,
@@ -222,5 +225,14 @@ describe("CreateIssueModal", () => {
 
     expect(mockPush).toHaveBeenCalledWith("/ws-test/issues/issue-123");
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-1");
+  });
+
+  it("renders the orchestration picker in the property toolbar", () => {
+    render(<CreateIssueModal onClose={vi.fn()} />);
+
+    expect(screen.getByTestId("status-picker")).toBeInTheDocument();
+    expect(screen.getByTestId("priority-picker")).toBeInTheDocument();
+    expect(screen.getByTestId("orchestration-picker")).toBeInTheDocument();
+    expect(screen.getByTestId("assignee-picker")).toBeInTheDocument();
   });
 });

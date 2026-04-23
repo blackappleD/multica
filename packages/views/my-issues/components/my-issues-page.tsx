@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "zustand";
 import { toast } from "sonner";
 import { ChevronRight, ListTodo } from "lucide-react";
-import type { IssueStatus } from "@multica/core/types";
+import type { IssueOrchestration, IssueStatus } from "@multica/core/types";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { useAuthStore } from "@multica/core/auth";
 import { useCurrentWorkspace } from "@multica/core/paths";
@@ -25,6 +25,7 @@ import { useUpdateIssue } from "@multica/core/issues/mutations";
 import { myIssuesViewStore } from "@multica/core/issues/stores/my-issues-view-store";
 import { PageHeader } from "../../layout/page-header";
 import { MyIssuesHeader } from "./my-issues-header";
+import { OrchestrationBoardView } from "./orchestration-board-view";
 
 export function MyIssuesPage() {
   const user = useAuthStore((s) => s.user);
@@ -120,6 +121,31 @@ export function MyIssuesPage() {
     [updateIssueMutation],
   );
 
+  const handleMoveIssueOrchestration = useCallback(
+    (
+      issueId: string,
+      newOrchestration: IssueOrchestration | null,
+      newPosition?: number,
+    ) => {
+      const viewState = myIssuesViewStore.getState();
+      if (viewState.sortBy !== "position") {
+        viewState.setSortBy("position");
+        viewState.setSortDirection("asc");
+      }
+
+      const updates: Partial<{ orchestration: IssueOrchestration | null; position: number }> = {
+        orchestration: newOrchestration,
+      };
+      if (newPosition !== undefined) updates.position = newPosition;
+
+      updateIssueMutation.mutate(
+        { id: issueId, ...updates },
+        { onError: () => toast.error("Failed to move issue") },
+      );
+    },
+    [updateIssueMutation],
+  );
+
   if (loading) {
     return (
       <div className="flex flex-1 min-h-0 flex-col">
@@ -194,6 +220,12 @@ export function MyIssuesPage() {
                 childProgressMap={childProgressMap}
                 myIssuesScope={scope}
                 myIssuesFilter={filter}
+              />
+            ) : viewMode === "orchestration" ? (
+              <OrchestrationBoardView
+                issues={issues}
+                childProgressMap={childProgressMap}
+                onMoveIssue={handleMoveIssueOrchestration}
               />
             ) : (
               <ListView

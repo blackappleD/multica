@@ -8,6 +8,14 @@ export type IssueStatus =
   | "cancelled";
 
 export type IssuePriority = "urgent" | "high" | "medium" | "low" | "none";
+export type IssueOrchestration =
+  | "consensus"
+  | "specification"
+  | "development"
+  | "value"
+  | "metrics"
+  | "alignment"
+  | "operations";
 
 export type IssueAssigneeType = "member" | "agent";
 
@@ -29,6 +37,7 @@ export interface Issue {
   description: string | null;
   status: IssueStatus;
   priority: IssuePriority;
+  orchestration: IssueOrchestration | null;
   assignee_type: IssueAssigneeType | null;
   assignee_id: string | null;
   creator_type: IssueAssigneeType;

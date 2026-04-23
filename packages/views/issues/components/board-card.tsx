@@ -15,11 +15,13 @@ import { useWorkspacePaths } from "@multica/core/paths";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { projectListOptions } from "@multica/core/projects/queries";
 import { PriorityIcon } from "./priority-icon";
-import { PriorityPicker, AssigneePicker, DueDatePicker } from "./pickers";
+import { PriorityPicker, OrchestrationPicker, AssigneePicker, DueDatePicker } from "./pickers";
 import { PRIORITY_CONFIG } from "@multica/core/issues/config";
 import { useViewStore } from "@multica/core/issues/stores/view-store-context";
+import { DEFAULT_CARD_PROPERTIES } from "@multica/core/issues/stores/view-store";
 import { ProgressRing } from "./progress-ring";
 import type { ChildProgress } from "./list-row";
+import { OrchestrationIcon } from "./orchestration-icon";
 
 function formatDate(date: string): string {
   return new Date(date).toLocaleDateString("en-US", {
@@ -50,7 +52,8 @@ export const BoardCardContent = memo(function BoardCardContent({
   editable?: boolean;
   childProgress?: ChildProgress;
 }) {
-  const storeProperties = useViewStore((s) => s.cardProperties);
+  const rawCardProperties = useViewStore((s) => s.cardProperties);
+  const storeProperties = { ...DEFAULT_CARD_PROPERTIES, ...rawCardProperties };
   const priorityCfg = PRIORITY_CONFIG[issue.priority];
   const wsId = useWorkspaceId();
   const { data: projects = [] } = useQuery({
@@ -70,6 +73,7 @@ export const BoardCardContent = memo(function BoardCardContent({
     [issue.id, updateIssueMutation],
   );
 
+  const showOrchestration = storeProperties.orchestration;
   const showPriority = storeProperties.priority;
   const showDescription = storeProperties.description && issue.description;
   const showAssignee = storeProperties.assignee && issue.assignee_type && issue.assignee_id;
@@ -114,8 +118,8 @@ export const BoardCardContent = memo(function BoardCardContent({
         </p>
       )}
 
-      {/* Row 3: Assignee, priority badge, due date */}
-      {(showAssignee || showPriority || showDueDate) && (
+      {/* Row 3: Assignee, orchestration, priority, due date */}
+      {(showAssignee || showOrchestration || showPriority || showDueDate) && (
         <div className="mt-3 flex items-center gap-2">
           {showAssignee &&
             (editable ? (
@@ -158,6 +162,38 @@ export const BoardCardContent = memo(function BoardCardContent({
               <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${priorityCfg.badgeBg} ${priorityCfg.badgeText}`}>
                 <PriorityIcon priority={issue.priority} className="h-3 w-3" inheritColor />
                 {priorityCfg.label}
+              </span>
+            ))}
+          {showOrchestration &&
+            (editable ? (
+              <PickerWrapper>
+                <OrchestrationPicker
+                  orchestration={issue.orchestration}
+                  onUpdate={handleUpdate}
+                  trigger={
+                    <span
+                      className="inline-flex"
+                      title={issue.orchestration ? `Orchestration: ${issue.orchestration}` : "Orchestration: No orchestration"}
+                      aria-label={issue.orchestration ? `Orchestration: ${issue.orchestration}` : "Orchestration: No orchestration"}
+                    >
+                      <OrchestrationIcon
+                        orchestration={issue.orchestration}
+                        className="h-[18px] w-[18px]"
+                      />
+                    </span>
+                  }
+                />
+              </PickerWrapper>
+            ) : (
+              <span
+                className="inline-flex"
+                title={issue.orchestration ? `Orchestration: ${issue.orchestration}` : "Orchestration: No orchestration"}
+                aria-label={issue.orchestration ? `Orchestration: ${issue.orchestration}` : "Orchestration: No orchestration"}
+              >
+                <OrchestrationIcon
+                  orchestration={issue.orchestration}
+                  className="h-[18px] w-[18px]"
+                />
               </span>
             ))}
           {showDueDate && (

@@ -1,5 +1,5 @@
 -- name: ListIssues :many
-SELECT id, workspace_id, title, description, status, priority,
+SELECT id, workspace_id, title, description, status, priority, orchestration,
        assignee_type, assignee_id, creator_type, creator_id,
        parent_issue_id, position, due_date, created_at, updated_at, number, project_id
 FROM issue
@@ -23,11 +23,11 @@ WHERE id = $1 AND workspace_id = $2;
 
 -- name: CreateIssue :one
 INSERT INTO issue (
-    workspace_id, title, description, status, priority,
+    workspace_id, title, description, status, priority, orchestration,
     assignee_type, assignee_id, creator_type, creator_id,
     parent_issue_id, position, due_date, number, project_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
 ) RETURNING *;
 
 -- name: GetIssueByNumber :one
@@ -40,6 +40,7 @@ UPDATE issue SET
     description = COALESCE(sqlc.narg('description'), description),
     status = COALESCE(sqlc.narg('status'), status),
     priority = COALESCE(sqlc.narg('priority'), priority),
+    orchestration = sqlc.narg('orchestration'),
     assignee_type = sqlc.narg('assignee_type'),
     assignee_id = sqlc.narg('assignee_id'),
     position = COALESCE(sqlc.narg('position'), position),
@@ -59,12 +60,12 @@ RETURNING *;
 
 -- name: CreateIssueWithOrigin :one
 INSERT INTO issue (
-    workspace_id, title, description, status, priority,
+    workspace_id, title, description, status, priority, orchestration,
     assignee_type, assignee_id, creator_type, creator_id,
     parent_issue_id, position, due_date, number, project_id,
     origin_type, origin_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
     sqlc.narg('origin_type'), sqlc.narg('origin_id')
 ) RETURNING *;
 
@@ -72,7 +73,7 @@ INSERT INTO issue (
 DELETE FROM issue WHERE id = $1;
 
 -- name: ListOpenIssues :many
-SELECT id, workspace_id, title, description, status, priority,
+SELECT id, workspace_id, title, description, status, priority, orchestration,
        assignee_type, assignee_id, creator_type, creator_id,
        parent_issue_id, position, due_date, created_at, updated_at, number, project_id
 FROM issue

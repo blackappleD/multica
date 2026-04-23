@@ -62,7 +62,7 @@ import { AvatarGroup, AvatarGroupCount } from "@multica/ui/components/ui/avatar"
 import { ActorAvatar } from "../../common/actor-avatar";
 import type { UpdateIssueRequest, IssueStatus, IssuePriority, TimelineEntry, Issue } from "@multica/core/types";
 import { ALL_STATUSES, STATUS_CONFIG, PRIORITY_ORDER, PRIORITY_CONFIG } from "@multica/core/issues/config";
-import { StatusIcon, PriorityIcon, StatusPicker, PriorityPicker, DueDatePicker, AssigneePicker, canAssignAgent } from ".";
+import { StatusIcon, PriorityIcon, StatusPicker, PriorityPicker, OrchestrationPicker, DueDatePicker, AssigneePicker, canAssignAgent } from ".";
 import { ProjectPicker } from "../../projects/components/project-picker";
 import { CommentCard } from "./comment-card";
 import { CommentInput } from "./comment-input";
@@ -170,9 +170,9 @@ function PropRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-8 items-center gap-2 rounded-md px-2 -mx-2 hover:bg-accent/50 transition-colors">
-      <span className="w-16 shrink-0 text-xs text-muted-foreground">{label}</span>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs truncate">
+    <div className="flex min-h-8 items-center gap-3 rounded-md px-2 -mx-2 hover:bg-accent/50 transition-colors">
+      <span className="w-24 shrink-0 text-xs text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs">
         {children}
       </div>
     </div>
@@ -577,6 +577,9 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
           </PropRow>
           <PropRow label="Priority">
             <PriorityPicker priority={issue.priority} onUpdate={handleUpdateField} align="start" />
+          </PropRow>
+          <PropRow label="Orchestration">
+            <OrchestrationPicker orchestration={issue.orchestration} onUpdate={handleUpdateField} align="start" />
           </PropRow>
           <PropRow label="Assignee">
             <AssigneePicker assigneeType={issue.assignee_type} assigneeId={issue.assignee_id} onUpdate={handleUpdateField} align="start" />

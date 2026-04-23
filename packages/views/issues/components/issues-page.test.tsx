@@ -108,7 +108,7 @@ const mockViewState = {
   includeNoProject: false,
   sortBy: "position" as const,
   sortDirection: "asc" as const,
-  cardProperties: { priority: true, description: true, assignee: true, dueDate: true, project: true, childProgress: true },
+  cardProperties: { orchestration: false, priority: true, description: true, assignee: true, dueDate: true, project: true, childProgress: true },
   listCollapsedStatuses: [] as string[],
   setViewMode: vi.fn(),
   toggleStatusFilter: vi.fn(),
@@ -147,7 +147,17 @@ vi.mock("@multica/core/issues/stores/view-store", () => ({
     { value: "created_at", label: "Created date" },
     { value: "title", label: "Title" },
   ],
+  DEFAULT_CARD_PROPERTIES: {
+    orchestration: false,
+    priority: true,
+    description: true,
+    assignee: true,
+    dueDate: true,
+    project: true,
+    childProgress: true,
+  },
   CARD_PROPERTY_OPTIONS: [
+    { key: "orchestration", label: "Orchestration" },
     { key: "priority", label: "Priority" },
     { key: "description", label: "Description" },
     { key: "assignee", label: "Assignee" },
@@ -257,6 +267,7 @@ const issueDefaults = {
   parent_issue_id: null,
   project_id: null,
   position: 0,
+  orchestration: null,
 };
 
 const mockIssues: Issue[] = [

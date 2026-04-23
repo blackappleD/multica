@@ -216,6 +216,16 @@ vi.mock("@multica/core/issues/config", () => ({
     low: { label: "Low", bars: 1, color: "text-info", badgeBg: "bg-info/10", badgeText: "text-info" },
     none: { label: "No priority", bars: 0, color: "text-muted-foreground", badgeBg: "bg-muted", badgeText: "text-muted-foreground" },
   },
+  ORCHESTRATION_ORDER: ["consensus", "specification", "development", "value", "metrics", "alignment", "operations"],
+  ORCHESTRATION_CONFIG: {
+    consensus: { label: "Consensus" },
+    specification: { label: "Specification" },
+    development: { label: "Development" },
+    value: { label: "Value" },
+    metrics: { label: "Metrics" },
+    alignment: { label: "Alignment" },
+    operations: { label: "Operations" },
+  },
 }));
 
 // Mock recent issues store
@@ -292,6 +302,7 @@ const mockIssue: Issue = {
   description: "Add JWT auth to the backend",
   status: "in_progress",
   priority: "high",
+  orchestration: "specification",
   assignee_type: "member",
   assignee_id: "user-1",
   creator_type: "member",
@@ -420,7 +431,7 @@ describe("IssueDetail (shared)", () => {
     expect(wsLink.closest("a")).toHaveAttribute("href", "/test/issues");
   });
 
-  it("renders properties sidebar with status, priority, assignee, due date", async () => {
+  it("renders properties sidebar with status, priority, orchestration, assignee, due date", async () => {
     renderIssueDetail();
 
     await waitFor(() => {
@@ -429,8 +440,30 @@ describe("IssueDetail (shared)", () => {
 
     expect(screen.getByText("Status")).toBeInTheDocument();
     expect(screen.getByText("Priority")).toBeInTheDocument();
+    expect(screen.getByText("Orchestration")).toBeInTheDocument();
+    expect(screen.getByText("Specification")).toBeInTheDocument();
     expect(screen.getByText("Assignee")).toBeInTheDocument();
     expect(screen.getByText("Due date")).toBeInTheDocument();
+  });
+
+  it("renders orchestration between priority and assignee", async () => {
+    renderIssueDetail();
+
+    await waitFor(() => {
+      expect(screen.getByText("Properties")).toBeInTheDocument();
+    });
+
+    const labels = Array.from(document.querySelectorAll("span"))
+      .map((node) => node.textContent?.trim())
+      .filter((text): text is string => Boolean(text));
+
+    const priorityIndex = labels.indexOf("Priority");
+    const orchestrationIndex = labels.indexOf("Orchestration");
+    const assigneeIndex = labels.indexOf("Assignee");
+
+    expect(priorityIndex).toBeGreaterThanOrEqual(0);
+    expect(orchestrationIndex).toBeGreaterThan(priorityIndex);
+    expect(assigneeIndex).toBeGreaterThan(orchestrationIndex);
   });
 
   it("renders Details section with Created by and dates", async () => {
