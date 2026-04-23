@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { ChevronRight, ListTodo } from "lucide-react";
-import type { IssueStatus } from "@multica/core/types";
+import type { IssueOrchestration, IssueStatus } from "@multica/core/types";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useIssueViewStore, useClearFiltersOnWorkspaceChange } from "@multica/core/issues/stores/view-store";
@@ -22,6 +22,7 @@ import { IssuesHeader } from "./issues-header";
 import { BoardView } from "./board-view";
 import { ListView } from "./list-view";
 import { BatchActionToolbar } from "./batch-action-toolbar";
+import { OrchestrationBoardView } from "../../my-issues/components/orchestration-board-view";
 
 export function IssuesPage() {
   const wsId = useWorkspaceId();
@@ -85,6 +86,31 @@ export function IssuesPage() {
 
       const updates: Partial<{ status: IssueStatus; position: number }> = {
         status: newStatus,
+      };
+      if (newPosition !== undefined) updates.position = newPosition;
+
+      updateIssueMutation.mutate(
+        { id: issueId, ...updates },
+        { onError: () => toast.error("Failed to move issue") },
+      );
+    },
+    [updateIssueMutation],
+  );
+
+  const handleMoveIssueOrchestration = useCallback(
+    (
+      issueId: string,
+      newOrchestration: IssueOrchestration | null,
+      newPosition?: number,
+    ) => {
+      const viewState = useIssueViewStore.getState();
+      if (viewState.sortBy !== "position") {
+        viewState.setSortBy("position");
+        viewState.setSortDirection("asc");
+      }
+
+      const updates: Partial<{ orchestration: IssueOrchestration | null; position: number }> = {
+        orchestration: newOrchestration,
       };
       if (newPosition !== undefined) updates.position = newPosition;
 
@@ -168,6 +194,12 @@ export function IssuesPage() {
                 hiddenStatuses={hiddenStatuses}
                 onMoveIssue={handleMoveIssue}
                 childProgressMap={childProgressMap}
+              />
+            ) : viewMode === "orchestration" ? (
+              <OrchestrationBoardView
+                issues={issues}
+                childProgressMap={childProgressMap}
+                onMoveIssue={handleMoveIssueOrchestration}
               />
             ) : (
               <ListView issues={issues} visibleStatuses={visibleStatuses} childProgressMap={childProgressMap} />

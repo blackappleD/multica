@@ -37,7 +37,7 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ];
 
 export const DEFAULT_CARD_PROPERTIES: CardProperties = {
-  orchestration: false,
+  orchestration: true,
   priority: true,
   description: true,
   assignee: true,

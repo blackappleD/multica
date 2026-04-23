@@ -17,6 +17,7 @@ import {
   User,
   UserMinus,
   UserPen,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@multica/ui/components/ui/button";
 import {
@@ -714,6 +715,8 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
                     <Button variant="outline" size="icon-sm" className="text-muted-foreground">
                       {viewMode === "board" ? (
                         <Columns3 className="size-4" />
+                      ) : viewMode === "orchestration" ? (
+                        <Workflow className="size-4" />
                       ) : (
                         <List className="size-4" />
                       )}
@@ -723,7 +726,11 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
               }
             />
             <TooltipContent side="bottom">
-              {viewMode === "board" ? "Board view" : "List view"}
+              {viewMode === "board"
+                ? "Board view"
+                : viewMode === "orchestration"
+                  ? "Orchestration view"
+                  : "List view"}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-auto">
@@ -732,6 +739,10 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
               <DropdownMenuItem onClick={() => act.setViewMode("board")}>
                 <Columns3 />
                 Board
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => act.setViewMode("orchestration")}>
+                <Workflow />
+                Orchestration
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => act.setViewMode("list")}>
                 <List />
