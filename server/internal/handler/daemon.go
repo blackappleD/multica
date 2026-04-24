@@ -660,10 +660,30 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 
 		// Fetch the triggering comment content so the daemon can embed it
 		// directly in the agent prompt (prevents the agent from ignoring comments
-		// when stale output files exist in a reused workdir).
+		// when stale output files exist in a reused workdir). Also surface the
+		// comment author's kind and display name so the agent knows whether it
+		// was triggered by a human or by another agent — a signal used by the
+		// harness instructions to avoid mention loops between agents.
 		if task.TriggerCommentID.Valid {
 			if comment, err := h.Queries.GetComment(r.Context(), task.TriggerCommentID); err == nil {
 				resp.TriggerCommentContent = comment.Content
+				resp.TriggerAuthorType = comment.AuthorType
+				switch comment.AuthorType {
+				case "agent":
+					if comment.AuthorID.Valid {
+						if a, err := h.Queries.GetAgent(r.Context(), comment.AuthorID); err == nil {
+							resp.TriggerAuthorName = a.Name
+						}
+					}
+				case "member":
+					// For member-authored comments, AuthorID is a user UUID
+					// (see handler.resolveActor) — look up the user's display name.
+					if comment.AuthorID.Valid {
+						if u, err := h.Queries.GetUser(r.Context(), comment.AuthorID); err == nil {
+							resp.TriggerAuthorName = u.Name
+						}
+					}
+				}
 			}
 		}
 
@@ -724,15 +744,30 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Autopilot run_only task: resolve workspace from autopilot_run → autopilot.
-	if task.AutopilotRunID.Valid && resp.WorkspaceID == "" {
+	// Autopilot run_only task: resolve workspace from autopilot_run →
+	// autopilot, and include the autopilot instructions because there is no
+	// issue for the agent to fetch.
+	if task.AutopilotRunID.Valid {
 		if run, err := h.Queries.GetAutopilotRun(r.Context(), task.AutopilotRunID); err == nil {
+			resp.AutopilotID = uuidToString(run.AutopilotID)
+			resp.AutopilotSource = run.Source
+			if run.TriggerPayload != nil {
+				resp.AutopilotTriggerPayload = json.RawMessage(run.TriggerPayload)
+			}
 			if ap, err := h.Queries.GetAutopilot(r.Context(), run.AutopilotID); err == nil {
-				resp.WorkspaceID = uuidToString(ap.WorkspaceID)
-				if ws, err := h.Queries.GetWorkspace(r.Context(), ap.WorkspaceID); err == nil && ws.Repos != nil {
-					var repos []RepoData
-					if json.Unmarshal(ws.Repos, &repos) == nil && len(repos) > 0 {
-						resp.Repos = repos
+				resp.AutopilotTitle = ap.Title
+				if ap.Description.Valid {
+					resp.AutopilotDescription = ap.Description.String
+				}
+				if resp.WorkspaceID == "" {
+					resp.WorkspaceID = uuidToString(ap.WorkspaceID)
+				}
+				if len(resp.Repos) == 0 {
+					if ws, err := h.Queries.GetWorkspace(r.Context(), ap.WorkspaceID); err == nil && ws.Repos != nil {
+						var repos []RepoData
+						if json.Unmarshal(ws.Repos, &repos) == nil && len(repos) > 0 {
+							resp.Repos = repos
+						}
 					}
 				}
 			}

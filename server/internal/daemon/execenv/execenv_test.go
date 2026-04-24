@@ -267,6 +267,45 @@ func TestWriteContextFilesOmitsSkillsWhenEmpty(t *testing.T) {
 	}
 }
 
+func TestWriteContextFilesAutopilotRunOnly(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	ctx := TaskContextForEnv{
+		AutopilotRunID:       "run-1",
+		AutopilotID:          "autopilot-1",
+		AutopilotTitle:       "Daily dependency check",
+		AutopilotDescription: "Check dependencies and report outdated packages.",
+		AutopilotSource:      "manual",
+	}
+
+	if err := writeContextFiles(dir, "", ctx); err != nil {
+		t.Fatalf("writeContextFiles failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, ".agent_context", "issue_context.md"))
+	if err != nil {
+		t.Fatalf("failed to read: %v", err)
+	}
+
+	s := string(content)
+	for _, want := range []string{
+		"# Autopilot Run",
+		"run-1",
+		"autopilot-1",
+		"Check dependencies and report outdated packages.",
+		"multica autopilot get autopilot-1 --output json",
+		"no assigned issue",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("autopilot context missing %q\n---\n%s", want, s)
+		}
+	}
+	if strings.Contains(s, "Run `multica issue get") {
+		t.Errorf("autopilot context should not contain issue get workflow\n---\n%s", s)
+	}
+}
+
 func TestWriteContextFilesClaudeNativeSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -728,6 +767,49 @@ func TestInjectRuntimeConfigRequiresExplicitCommentPost(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInjectRuntimeConfigAutopilotRunOnlyNoIssueWorkflow(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	ctx := TaskContextForEnv{
+		AutopilotRunID:       "run-1",
+		AutopilotID:          "autopilot-1",
+		AutopilotTitle:       "Daily dependency check",
+		AutopilotDescription: "Check dependencies and report outdated packages.",
+		AutopilotSource:      "manual",
+	}
+
+	if err := InjectRuntimeConfig(dir, "codex", ctx); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	s := string(data)
+
+	for _, want := range []string{
+		"Autopilot in run-only mode",
+		"Autopilot run ID: `run-1`",
+		"Check dependencies and report outdated packages.",
+		"multica autopilot get autopilot-1 --output json",
+		"Your final assistant output is captured automatically as the autopilot run result",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("autopilot runtime config missing %q\n---\n%s", want, s)
+		}
+	}
+
+	for _, absent := range []string{
+		"Run `multica issue get",
+		"Final results MUST be delivered via `multica issue comment add`",
+	} {
+		if strings.Contains(s, absent) {
+			t.Errorf("autopilot runtime config should not contain %q\n---\n%s", absent, s)
+		}
 	}
 }
 
@@ -1352,4 +1434,77 @@ func TestReadGCMeta_NoFile(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
+}
+
+// TestInjectRuntimeConfigMentionLoopHardening locks in the mention-loop
+// instructions (see MUL-1323 / GH#1576). Two agents were stuck in an infinite
+// @mention loop because the harness told them mentions were "actions" but did
+// not tell them (a) when NOT to mention, (b) that silence ends a thread, or
+// (c) that the triggering comment was from another agent. If any of the
+// signals below regress, agent-to-agent loops come back.
+func TestInjectRuntimeConfigMentionLoopHardening(t *testing.T) {
+	t.Parallel()
+
+	commentTriggerCtx := TaskContextForEnv{
+		IssueID:          "issue-1",
+		TriggerCommentID: "comment-1",
+	}
+	assignmentCtx := TaskContextForEnv{IssueID: "issue-1"}
+
+	readClaudeMD := func(t *testing.T, ctx TaskContextForEnv) string {
+		t.Helper()
+		dir := t.TempDir()
+		if err := InjectRuntimeConfig(dir, "claude", ctx); err != nil {
+			t.Fatalf("InjectRuntimeConfig failed: %v", err)
+		}
+		data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+		if err != nil {
+			t.Fatalf("read CLAUDE.md: %v", err)
+		}
+		return string(data)
+	}
+
+	t.Run("mentions-section-lists-loop-protocol", func(t *testing.T) {
+		t.Parallel()
+		s := readClaudeMD(t, assignmentCtx)
+		for _, want := range []string{
+			"side-effecting actions",
+			"enqueues a new run for that agent",
+			"When NOT to use a mention link",
+			"When a mention IS appropriate",
+			"end with no mention at all",
+			"Silence ends conversations",
+		} {
+			if !strings.Contains(s, want) {
+				t.Errorf("Mentions section missing %q\n---\n%s", want, s)
+			}
+		}
+	})
+
+	t.Run("closing-line-no-longer-says-always-mention", func(t *testing.T) {
+		t.Parallel()
+		s := readClaudeMD(t, assignmentCtx)
+		// The old footer said "**always** use the mention format" which models
+		// over-generalized to agent/member mentions. Guard against regression.
+		if strings.Contains(s, "**always** use the mention format") {
+			t.Errorf("CLAUDE.md still contains the overreaching \"**always** use the mention format\" guidance")
+		}
+	})
+
+	t.Run("workflow-carries-silence-as-exit-and-no-signoff-mention", func(t *testing.T) {
+		t.Parallel()
+		s := readClaudeMD(t, commentTriggerCtx)
+		// The anti-loop signal for CLAUDE.md lives in the numbered workflow
+		// steps (4 + 5), not in a dedicated preamble. Lock in the key phrases
+		// so the signal can't decay back into pure prose again.
+		for _, want := range []string{
+			"Decide whether a reply is warranted",
+			"Silence is a valid and preferred way",
+			"Never @mention the agent you are replying to as a thank-you or sign-off",
+		} {
+			if !strings.Contains(s, want) {
+				t.Errorf("comment-triggered CLAUDE.md missing %q", want)
+			}
+		}
+	})
 }

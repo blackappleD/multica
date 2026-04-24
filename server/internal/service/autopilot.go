@@ -117,7 +117,7 @@ func (s *AutopilotService) dispatchCreateIssue(ctx context.Context, ap db.Autopi
 		Title:         title,
 		Description:   description,
 		Status:        "todo",
-		Priority:      ap.Priority,
+		Priority:      "none",
 		AssigneeType:  pgtype.Text{String: "agent", Valid: true},
 		AssigneeID:    ap.AssigneeID,
 		CreatorType:   ap.CreatedByType,
@@ -126,7 +126,7 @@ func (s *AutopilotService) dispatchCreateIssue(ctx context.Context, ap db.Autopi
 		Position:      0,
 		DueDate:       pgtype.Timestamptz{},
 		Number:        issueNumber,
-		ProjectID:     ap.ProjectID,
+		ProjectID:     pgtype.UUID{},
 		OriginType:    pgtype.Text{String: "autopilot", Valid: true},
 		OriginID:      ap.ID,
 	})
@@ -190,7 +190,7 @@ func (s *AutopilotService) dispatchRunOnly(ctx context.Context, ap db.Autopilot,
 	task, err := s.Queries.CreateAutopilotTask(ctx, db.CreateAutopilotTaskParams{
 		AgentID:        ap.AssigneeID,
 		RuntimeID:      agent.RuntimeID,
-		Priority:       priorityToInt(ap.Priority),
+		Priority:       0,
 		AutopilotRunID: run.ID,
 	})
 	if err != nil {
@@ -293,7 +293,6 @@ func (s *AutopilotService) SyncRunFromTask(ctx context.Context, task db.AgentTas
 		s.publishRunDone(wsID, run, "failed")
 	}
 }
-
 
 func (s *AutopilotService) failRun(ctx context.Context, runID pgtype.UUID, reason string) {
 	if _, err := s.Queries.UpdateAutopilotRunFailed(ctx, db.UpdateAutopilotRunFailedParams{

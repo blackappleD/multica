@@ -15,6 +15,7 @@ import { ORCHESTRATION_CONFIG } from "@multica/core/issues/config";
 import { PriorityIcon } from "./priority-icon";
 import { ProgressRing } from "./progress-ring";
 import { OrchestrationIcon } from "./orchestration-icon";
+import { IssueActionsContextMenu } from "../actions";
 
 export interface ChildProgress {
   done: number;
@@ -57,8 +58,9 @@ export const ListRow = memo(function ListRow({
   const showDueDate = storeProperties.dueDate && issue.due_date;
 
   return (
-    <div
-      className={`group/row flex h-9 items-center gap-2 px-4 text-sm transition-colors hover:bg-accent/50 ${
+    <IssueActionsContextMenu issue={issue}>
+      <div
+        className={`group/row flex h-9 items-center gap-2 px-4 text-sm transition-colors hover:not-data-[popup-open]:bg-accent/60 data-[popup-open]:bg-accent ${
         selected ? "bg-accent/30" : ""
       }`}
     >
@@ -119,6 +121,6 @@ export const ListRow = memo(function ListRow({
           />
         )}
       </AppLink>
-    </div>
+    </div></IssueActionsContextMenu>
   );
 });
